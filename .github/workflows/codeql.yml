@@ -1,0 +1,56 @@
+name: CodeQL
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "21 3 * * 1"
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Detect JavaScript/TypeScript sources
+        id: source_check
+        run: |
+          files=$(git ls-files '*.js' '*.jsx' '*.mjs' '*.cjs' '*.ts' '*.tsx' | wc -l | tr -d ' ')
+          if [ "$files" -gt 0 ]; then
+            echo "has_source=true" >> "$GITHUB_OUTPUT"
+            echo "Detected $files JavaScript/TypeScript source files."
+          else
+            echo "has_source=false" >> "$GITHUB_OUTPUT"
+            echo "No JavaScript/TypeScript source files detected. CodeQL will be skipped."
+          fi
+      - name: Initialize CodeQL
+        if: ${{ steps.source_check.outputs.has_source == 'true' }}
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - name: Autobuild
+        if: ${{ steps.source_check.outputs.has_source == 'true' }}
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform Analysis
+        if: ${{ steps.source_check.outputs.has_source == 'true' }}
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+      - name: Skip notice
+        if: ${{ steps.source_check.outputs.has_source != 'true' }}
+        run: echo "CodeQL skipped because there is no JavaScript/TypeScript source code yet."
