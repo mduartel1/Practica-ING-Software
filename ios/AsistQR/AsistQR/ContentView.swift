@@ -27,7 +27,7 @@ struct AttendanceListView: View {
     }
 
     private var items: [AttendanceItem] {
-        store.records(subject: selectedSubject, student: "Mario Duarte", period: selectedPeriod)
+        store.records(subject: selectedSubject, student: store.currentUser?.name, period: selectedPeriod)
     }
 
     var body: some View {
