@@ -6,6 +6,7 @@
 //
 
 import Testing
+import Foundation
 @testable import AsistQR
 
 struct AsistQRTests {
@@ -108,6 +109,32 @@ struct AsistQRTests {
         let csv = store.attendanceCSV()
 
         #expect(csv.contains("\"Bases, Datos\",\"Ana \"\"A\"\" Perez\",10:15,Presente,ASISTQR-BD-01"))
+    }
+
+    @MainActor
+    @Test func persistedStoreRestoresSubjectsSessionAndAttendance() async throws {
+        let suiteName = "AsistQRTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let subject = SubjectItem(name: "Arquitectura", detail: "Grupo D · Aula 9")
+        let store = AsistQRStore(subjects: [subject], attendance: [], defaults: defaults)
+        store.enableSession(for: subject, expiryMinutes: 15)
+        let code = try #require(store.activeSession?.code)
+        let result = store.registerAttendance(sessionCode: code, studentName: "Laura Martin")
+
+        let restored = AsistQRStore(subjects: [], attendance: [], defaults: defaults)
+
+        #expect(result.isSuccess)
+        #expect(restored.subjects == [subject])
+        #expect(restored.activeSession?.code == code)
+        #expect(restored.activeSession?.isActive == true)
+        #expect(restored.attendance.count == 1)
+        #expect(restored.attendance.first?.studentName == "Laura Martin")
+        #expect(restored.attendance.first?.subjectName == "Arquitectura")
     }
 
 }

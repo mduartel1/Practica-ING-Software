@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var store = AsistQRStore()
+    @StateObject private var store = AsistQRStore.live()
 
     var body: some View {
         AuthLandingView()
@@ -192,7 +192,7 @@ struct AttendanceListView: View {
     }
 }
 
-struct AttendanceItem: Identifiable {
+struct AttendanceItem: Codable, Identifiable {
     let id: UUID
     let title: String
     let subtitle: String
