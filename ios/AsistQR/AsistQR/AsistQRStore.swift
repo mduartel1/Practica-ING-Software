@@ -95,6 +95,25 @@ final class AsistQRStore: ObservableObject {
             return subjectMatches && studentMatches
         }
     }
+
+    func attendanceCSV(subject: String? = nil, student: String? = nil) -> String {
+        let header = ["Asignatura", "Alumno", "Hora", "Estado", "Codigo QR"]
+        let rows = records(subject: subject, student: student).map { item in
+            [item.subjectName, item.studentName, item.time, item.status, item.sessionCode]
+        }
+
+        return ([header] + rows)
+            .map { row in row.map(Self.csvField).joined(separator: ",") }
+            .joined(separator: "\n")
+    }
+
+    private nonisolated static func csvField(_ value: String) -> String {
+        let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
+        if escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n") {
+            return "\"\(escaped)\""
+        }
+        return escaped
+    }
 }
 
 struct QRSession: Equatable {

@@ -65,4 +65,49 @@ struct AsistQRTests {
         #expect(store.attendance.isEmpty)
     }
 
+    @MainActor
+    @Test func attendanceCSVIncludesHeadersAndFilteredRows() async throws {
+        let records = [
+            AttendanceItem(
+                title: "Laboratorio de Software",
+                subtitle: "Mario Duarte",
+                time: "08:30",
+                status: "Presente",
+                sessionCode: "ASISTQR-LAB-01"
+            ),
+            AttendanceItem(
+                title: "Bases de Datos",
+                subtitle: "Ana Perez",
+                time: "10:15",
+                status: "Tarde",
+                sessionCode: "ASISTQR-BD-01"
+            )
+        ]
+        let store = AsistQRStore(subjects: [], attendance: records)
+
+        let csv = store.attendanceCSV(subject: "Laboratorio de Software", student: "Todos")
+
+        #expect(csv.contains("Asignatura,Alumno,Hora,Estado,Codigo QR"))
+        #expect(csv.contains("Laboratorio de Software,Mario Duarte,08:30,Presente,ASISTQR-LAB-01"))
+        #expect(!csv.contains("Bases de Datos"))
+    }
+
+    @MainActor
+    @Test func attendanceCSVEscapesCommaAndQuoteFields() async throws {
+        let records = [
+            AttendanceItem(
+                title: "Bases, Datos",
+                subtitle: "Ana \"A\" Perez",
+                time: "10:15",
+                status: "Presente",
+                sessionCode: "ASISTQR-BD-01"
+            )
+        ]
+        let store = AsistQRStore(subjects: [], attendance: records)
+
+        let csv = store.attendanceCSV()
+
+        #expect(csv.contains("\"Bases, Datos\",\"Ana \"\"A\"\" Perez\",10:15,Presente,ASISTQR-BD-01"))
+    }
+
 }
