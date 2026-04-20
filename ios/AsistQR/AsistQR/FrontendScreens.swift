@@ -827,6 +827,7 @@ struct ProfessorHistoryView: View {
     @EnvironmentObject private var store: AsistQRStore
     @State private var selectedSubject = "Todas"
     @State private var selectedStudent = "Todos"
+    @State private var showingExport = false
 
     private var subjectOptions: [String] {
         ["Todas"] + store.subjects.map(\.name)
@@ -839,6 +840,10 @@ struct ProfessorHistoryView: View {
 
     private var items: [AttendanceItem] {
         store.records(subject: selectedSubject, student: selectedStudent)
+    }
+
+    private var exportCSV: String {
+        store.attendanceCSV(subject: selectedSubject, student: selectedStudent)
     }
 
     var body: some View {
@@ -884,7 +889,7 @@ struct ProfessorHistoryView: View {
                 }
 
                 Button {
-                    // UI only
+                    showingExport = true
                 } label: {
                     Text("Exportar CSV")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -903,6 +908,9 @@ struct ProfessorHistoryView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingExport) {
+            CSVExportView(csvText: exportCSV)
+        }
     }
 
     @ViewBuilder
@@ -973,6 +981,53 @@ struct ProfessorHistoryView: View {
             return Color(red: 0.98, green: 0.71, blue: 0.32)
         default:
             return Color(red: 0.62, green: 0.66, blue: 0.98)
+        }
+    }
+}
+
+struct CSVExportView: View {
+    let csvText: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Vista previa CSV")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+
+                ScrollView {
+                    Text(csvText)
+                        .font(.system(size: 12, weight: .regular, design: .monospaced))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.black.opacity(0.05))
+                        )
+                }
+
+                ShareLink(item: csvText) {
+                    Text("Compartir CSV")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color(red: 0.90, green: 0.87, blue: 0.35))
+                        )
+                        .foregroundStyle(Color.black.opacity(0.9))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 18)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
