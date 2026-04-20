@@ -25,13 +25,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: List available destinations
-        run: xcodebuild -showdestinations -project ios/AsistQR/AsistQR.xcodeproj -scheme AsistQR
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
       - name: Run unit tests
         run: |
+          # Dynamically pick the latest available iPhone simulator UDID to avoid
+          # hard-coded device names that may not exist on every runner image.
+          SIM_UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import sys, json
+          devices = json.load(sys.stdin)['devices']
+          for runtime in sorted(devices.keys(), reverse=True):
+            if 'iOS' not in runtime: continue
+            for d in devices[runtime]:
+              if d.get('isAvailable') and 'iPhone' in d['name']:
+                print(d['udid'])
+                exit()
+          ")
+          echo "Simulator UDID: $SIM_UDID"
           xcodebuild test \
             -project ios/AsistQR/AsistQR.xcodeproj \
             -scheme AsistQR \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -destination "platform=iOS Simulator,id=$SIM_UDID" \
             -only-testing:AsistQRTests
