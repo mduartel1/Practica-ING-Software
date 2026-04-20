@@ -746,6 +746,8 @@ struct SessionControlView: View {
     let subject: SubjectItem?
 
     @State private var expiryMinutes = 15
+    @State private var timeRemaining: TimeInterval = 0
+    @State private var countdownTimer: Timer?
 
     init(subject: SubjectItem? = nil) {
         self.subject = subject
@@ -757,6 +759,12 @@ struct SessionControlView: View {
 
     private var session: QRSession? {
         store.activeSession
+    }
+
+    private var countdownColor: Color {
+        if timeRemaining > 120 { return Color(red: 0.48, green: 0.90, blue: 0.63) }
+        if timeRemaining > 30 { return Color(red: 0.98, green: 0.71, blue: 0.32) }
+        return Color(red: 0.95, green: 0.35, blue: 0.35)
     }
 
     var body: some View {
@@ -785,9 +793,19 @@ struct SessionControlView: View {
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(session?.isActive == true ? Color(red: 0.48, green: 0.90, blue: 0.63) : .white.opacity(0.6))
                     Spacer()
-                    Text("Caduca en \(expiryMinutes) min")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
+                    if session?.isActive == true && timeRemaining > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "timer")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(formatCountdown(timeRemaining))
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                        }
+                        .foregroundStyle(countdownColor)
+                    } else {
+                        Text("Caduca en \(expiryMinutes) min")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
                 }
 
                 ZStack {
@@ -816,6 +834,7 @@ struct SessionControlView: View {
                     Button {
                         if let selectedSubject {
                             store.enableSession(for: selectedSubject, expiryMinutes: expiryMinutes)
+                            startCountdown()
                         }
                     } label: {
                         actionButton(title: "Habilitar QR", filled: true)
@@ -823,6 +842,7 @@ struct SessionControlView: View {
 
                     Button {
                         store.disableSession()
+                        stopCountdown()
                     } label: {
                         actionButton(title: "Deshabilitar QR", filled: false)
                     }
@@ -845,6 +865,40 @@ struct SessionControlView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { restoreCountdownIfNeeded() }
+        .onDisappear { stopCountdown() }
+    }
+
+    private func formatCountdown(_ interval: TimeInterval) -> String {
+        let total = max(0, Int(interval))
+        return String(format: "%02d:%02d", total / 60, total % 60)
+    }
+
+    private func startCountdown() {
+        stopCountdown()
+        updateTimeRemaining()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            updateTimeRemaining()
+        }
+    }
+
+    private func stopCountdown() {
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+    }
+
+    private func updateTimeRemaining() {
+        guard let expiresAt = store.activeSession?.expiresAt else {
+            timeRemaining = 0
+            return
+        }
+        timeRemaining = max(0, expiresAt.timeIntervalSinceNow)
+        if timeRemaining == 0 { stopCountdown() }
+    }
+
+    private func restoreCountdownIfNeeded() {
+        guard store.activeSession?.isActive == true else { return }
+        startCountdown()
     }
 
     @ViewBuilder

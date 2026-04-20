@@ -203,7 +203,8 @@ struct QRSession: Codable, Equatable {
             .prefix(2)
             .map(String.init)
             .joined(separator: "-")
-        return "ASISTQR-\(slug)-01"
+        let suffix = UUID().uuidString.prefix(6).uppercased()
+        return "ASISTQR-\(slug)-\(suffix)"
     }
 }
 
