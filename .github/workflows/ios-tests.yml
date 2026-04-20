@@ -1,0 +1,48 @@
+name: iOS Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: AsistQR Unit Tests
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: List available destinations
+        run: xcodebuild -showdestinations -project ios/AsistQR/AsistQR.xcodeproj -scheme AsistQR
+
+      - name: Select simulator
+        id: simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | ruby -rjson -e '
+            devices = JSON.parse(STDIN.read)["devices"].values.flatten
+            iphone = devices.find { |device| device["name"].include?("iPhone") && device["isAvailable"] }
+            abort("No available iPhone simulator found") unless iphone
+            puts iphone["udid"]
+          ')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project ios/AsistQR/AsistQR.xcodeproj \
+            -scheme AsistQR \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            -only-testing:AsistQRTests
