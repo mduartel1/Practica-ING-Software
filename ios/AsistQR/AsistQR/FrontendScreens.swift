@@ -117,6 +117,7 @@ struct LoginView: View {
     @State private var password = ""
     @State private var goHome = false
     @State private var goRegister = false
+    @State private var errorText: String?
 
     var body: some View {
         AuthFormView(
@@ -124,7 +125,8 @@ struct LoginView: View {
             subtitle: role == .teacher ? "Acceso para profesores" : "Acceso para alumnos",
             primaryLabel: "Entrar",
             secondaryText: "No tienes cuenta?",
-            secondaryAction: "Registrarse"
+            secondaryAction: "Registrarse",
+            errorMessage: errorText
         ) {
             Group {
                 TextField("Correo institucional", text: $email)
@@ -133,7 +135,20 @@ struct LoginView: View {
                 SecureField("Contrasena", text: $password)
             }
         } primaryAction: {
+            errorText = nil
             let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+            guard !trimmedEmail.isEmpty else {
+                errorText = "Introduce tu correo institucional."
+                return
+            }
+            guard trimmedEmail.contains("@") else {
+                errorText = "El correo no tiene un formato valido."
+                return
+            }
+            guard !password.isEmpty else {
+                errorText = "Introduce tu contrasena."
+                return
+            }
             let name = String(trimmedEmail.split(separator: "@").first ?? Substring(trimmedEmail))
             store.loginUser(name: name.isEmpty ? trimmedEmail : name, email: trimmedEmail, role: role)
             goHome = true
@@ -157,6 +172,7 @@ struct RegisterView: View {
     @State private var password = ""
     @State private var goHome = false
     @State private var goLogin = false
+    @State private var errorText: String?
 
     var body: some View {
         AuthFormView(
@@ -164,7 +180,8 @@ struct RegisterView: View {
             subtitle: role == .teacher ? "Registro de profesor" : "Registro de alumno",
             primaryLabel: "Registrar",
             secondaryText: "Ya tienes cuenta?",
-            secondaryAction: "Iniciar sesion"
+            secondaryAction: "Iniciar sesion",
+            errorMessage: errorText
         ) {
             Group {
                 TextField("Nombre completo", text: $name)
@@ -174,9 +191,22 @@ struct RegisterView: View {
                 SecureField("Contrasena", text: $password)
             }
         } primaryAction: {
+            errorText = nil
             let trimmedName = name.trimmingCharacters(in: .whitespaces)
             let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-            store.loginUser(name: trimmedName.isEmpty ? trimmedEmail : trimmedName, email: trimmedEmail, role: role)
+            guard !trimmedName.isEmpty else {
+                errorText = "Introduce tu nombre completo."
+                return
+            }
+            guard !trimmedEmail.isEmpty, trimmedEmail.contains("@") else {
+                errorText = "Introduce un correo institucional valido."
+                return
+            }
+            guard password.count >= 6 else {
+                errorText = "La contrasena debe tener al menos 6 caracteres."
+                return
+            }
+            store.loginUser(name: trimmedName, email: trimmedEmail, role: role)
             goHome = true
         } secondaryActionHandler: {
             goLogin = true
@@ -199,6 +229,7 @@ struct AuthFormView<Fields: View>: View {
     let fields: Fields
     let primaryAction: () -> Void
     let secondaryActionHandler: () -> Void
+    var errorMessage: String? = nil
 
     init(
         title: String,
@@ -206,6 +237,7 @@ struct AuthFormView<Fields: View>: View {
         primaryLabel: String,
         secondaryText: String,
         secondaryAction: String,
+        errorMessage: String? = nil,
         @ViewBuilder fields: () -> Fields,
         primaryAction: @escaping () -> Void,
         secondaryActionHandler: @escaping () -> Void
@@ -215,6 +247,7 @@ struct AuthFormView<Fields: View>: View {
         self.primaryLabel = primaryLabel
         self.secondaryText = secondaryText
         self.secondaryAction = secondaryAction
+        self.errorMessage = errorMessage
         self.fields = fields()
         self.primaryAction = primaryAction
         self.secondaryActionHandler = secondaryActionHandler
@@ -256,6 +289,23 @@ struct AuthFormView<Fields: View>: View {
                         )
                         .foregroundStyle(.white)
                         .tint(Color(red: 0.90, green: 0.87, blue: 0.35))
+                }
+
+                if let errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text(errorMessage)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(Color(red: 0.98, green: 0.50, blue: 0.45))
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(red: 0.98, green: 0.50, blue: 0.45).opacity(0.12))
+                    )
                 }
 
                 Button {
