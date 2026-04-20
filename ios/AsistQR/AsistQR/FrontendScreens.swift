@@ -371,6 +371,9 @@ struct StudentHomeView: View {
 }
 
 struct ProfessorHomeView: View {
+    @EnvironmentObject private var store: AsistQRStore
+    @State private var showingExport = false
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -412,7 +415,7 @@ struct ProfessorHomeView: View {
                 }
 
                 Button {
-                    // UI only: exportar CSV
+                    showingExport = true
                 } label: {
                     secondaryRow(title: "Exportar CSV", subtitle: "Descargar historico")
                 }
@@ -423,6 +426,9 @@ struct ProfessorHomeView: View {
             .padding(.top, 20)
         }
         .navigationBarHidden(true)
+        .sheet(isPresented: $showingExport) {
+            CSVExportView(csvText: store.attendanceCSV())
+        }
     }
 
     @ViewBuilder
