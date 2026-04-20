@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
 
 struct AuthLandingView: View {
     @State private var role: UserRole = .student
@@ -757,14 +758,20 @@ struct SessionControlView: View {
                         .fill(.white.opacity(0.08))
                         .frame(height: 260)
                     VStack(spacing: 12) {
-                        Image(systemName: "qrcode")
-                            .font(.system(size: 70, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.8))
-                        Text(session?.code ?? "QR no generado")
-                            .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 18)
+                        if let session, session.isActive {
+                            QRCodeImageView(code: session.code)
+                                .frame(width: 200, height: 200)
+                                .padding(4)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        } else {
+                            Image(systemName: "qrcode")
+                                .font(.system(size: 70, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.25))
+                            Text("QR no generado")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
                     }
                 }
 
@@ -1023,6 +1030,35 @@ struct CSVExportView: View {
                 }
             }
         }
+    }
+}
+
+struct QRCodeImageView: View {
+    let code: String
+
+    var body: some View {
+        if let image = makeQRImage(from: code) {
+            Image(uiImage: image)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        } else {
+            Image(systemName: "qrcode")
+                .font(.system(size: 70))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+    }
+
+    private func makeQRImage(from string: String) -> UIImage? {
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(string.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage else { return nil }
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: 12, y: 12))
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
     }
 }
 
