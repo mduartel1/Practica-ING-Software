@@ -135,18 +135,12 @@ struct LoginView: View {
         } secondaryActionHandler: {
             goRegister = true
         }
-        .background(
-            NavigationLink(isActive: $goHome) {
-                role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
-            } label: { EmptyView() }
-            .hidden()
-        )
-        .background(
-            NavigationLink(isActive: $goRegister) {
-                RegisterView(role: role)
-            } label: { EmptyView() }
-            .hidden()
-        )
+        .navigationDestination(isPresented: $goHome) {
+            role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
+        }
+        .navigationDestination(isPresented: $goRegister) {
+            RegisterView(role: role)
+        }
     }
 }
 
@@ -178,18 +172,12 @@ struct RegisterView: View {
         } secondaryActionHandler: {
             goLogin = true
         }
-        .background(
-            NavigationLink(isActive: $goHome) {
-                role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
-            } label: { EmptyView() }
-            .hidden()
-        )
-        .background(
-            NavigationLink(isActive: $goLogin) {
-                LoginView(role: role)
-            } label: { EmptyView() }
-            .hidden()
-        )
+        .navigationDestination(isPresented: $goHome) {
+            role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
+        }
+        .navigationDestination(isPresented: $goLogin) {
+            LoginView(role: role)
+        }
     }
 }
 
