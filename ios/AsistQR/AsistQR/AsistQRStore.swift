@@ -109,11 +109,12 @@ final class AsistQRStore: ObservableObject {
         return .success("Asistencia registrada correctamente.")
     }
 
-    func records(subject: String? = nil, student: String? = nil) -> [AttendanceItem] {
+    func records(subject: String? = nil, student: String? = nil, period: Period? = nil, referenceDate: Date = Date()) -> [AttendanceItem] {
         attendance.filter { item in
             let subjectMatches = subject == nil || subject == "Todas" || item.subjectName == subject
             let studentMatches = student == nil || student == "Todos" || item.studentName == student
-            return subjectMatches && studentMatches
+            let periodMatches = period?.contains(item.timestamp, referenceDate: referenceDate) ?? true
+            return subjectMatches && studentMatches && periodMatches
         }
     }
 
