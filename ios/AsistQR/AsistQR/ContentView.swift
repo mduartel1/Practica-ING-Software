@@ -27,7 +27,7 @@ struct AttendanceListView: View {
     }
 
     private var items: [AttendanceItem] {
-        store.records(subject: selectedSubject, student: "Mario Duarte")
+        store.records(subject: selectedSubject, student: "Mario Duarte", period: selectedPeriod)
     }
 
     var body: some View {
@@ -201,6 +201,7 @@ struct AttendanceItem: Codable, Identifiable {
     let subjectName: String
     let studentName: String
     let sessionCode: String
+    let timestamp: Date
 
     init(
         id: UUID = UUID(),
@@ -210,7 +211,8 @@ struct AttendanceItem: Codable, Identifiable {
         status: String,
         subjectName: String? = nil,
         studentName: String? = nil,
-        sessionCode: String = ""
+        sessionCode: String = "",
+        timestamp: Date = Date()
     ) {
         self.id = id
         self.title = title
@@ -220,6 +222,32 @@ struct AttendanceItem: Codable, Identifiable {
         self.subjectName = subjectName ?? title
         self.studentName = studentName ?? subtitle
         self.sessionCode = sessionCode
+        self.timestamp = timestamp
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case subtitle
+        case time
+        case status
+        case subjectName
+        case studentName
+        case sessionCode
+        case timestamp
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        subtitle = try container.decode(String.self, forKey: .subtitle)
+        time = try container.decode(String.self, forKey: .time)
+        status = try container.decode(String.self, forKey: .status)
+        subjectName = try container.decode(String.self, forKey: .subjectName)
+        studentName = try container.decode(String.self, forKey: .studentName)
+        sessionCode = try container.decode(String.self, forKey: .sessionCode)
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
     }
 }
 
@@ -253,6 +281,25 @@ enum Period {
     case today
     case week
     case month
+}
+
+extension Period {
+    func contains(_ date: Date, referenceDate: Date = Date(), calendar: Calendar = .current) -> Bool {
+        switch self {
+        case .today:
+            return calendar.isDate(date, inSameDayAs: referenceDate)
+        case .week:
+            let dateComponents = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            let referenceComponents = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: referenceDate)
+            return dateComponents.yearForWeekOfYear == referenceComponents.yearForWeekOfYear
+                && dateComponents.weekOfYear == referenceComponents.weekOfYear
+        case .month:
+            let dateComponents = calendar.dateComponents([.year, .month], from: date)
+            let referenceComponents = calendar.dateComponents([.year, .month], from: referenceDate)
+            return dateComponents.year == referenceComponents.year
+                && dateComponents.month == referenceComponents.month
+        }
+    }
 }
 
 #Preview {

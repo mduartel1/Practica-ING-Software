@@ -112,6 +112,49 @@ struct AsistQRTests {
     }
 
     @MainActor
+    @Test func recordsFilterByAttendancePeriod() async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 20, hour: 10)))
+        let sameWeekDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 22, hour: 10)))
+        let sameMonthDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 6, hour: 10)))
+        let previousMonthDate = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 20, hour: 10)))
+        let records = [
+            AttendanceItem(title: "Lab", subtitle: "Mario Duarte", time: "10:00", status: "Presente", timestamp: referenceDate),
+            AttendanceItem(title: "Lab", subtitle: "Mario Duarte", time: "10:00", status: "Presente", timestamp: sameWeekDate),
+            AttendanceItem(title: "Lab", subtitle: "Mario Duarte", time: "10:00", status: "Presente", timestamp: sameMonthDate),
+            AttendanceItem(title: "Lab", subtitle: "Mario Duarte", time: "10:00", status: "Presente", timestamp: previousMonthDate)
+        ]
+        let store = AsistQRStore(subjects: [], attendance: records)
+
+        #expect(store.records(period: .today, referenceDate: referenceDate).count == 1)
+        #expect(store.records(period: .week, referenceDate: referenceDate).count == 2)
+        #expect(store.records(period: .month, referenceDate: referenceDate).count == 3)
+    }
+
+    @Test func attendanceItemDecodesPersistedRecordsWithoutTimestamp() throws {
+        let startedAt = Date()
+        let json = """
+        {
+            "id": "11111111-1111-1111-1111-111111111111",
+            "title": "Laboratorio de Software",
+            "subtitle": "Mario Duarte",
+            "time": "08:30",
+            "status": "Presente",
+            "subjectName": "Laboratorio de Software",
+            "studentName": "Mario Duarte",
+            "sessionCode": "ASISTQR-LAB-01"
+        }
+        """
+        let data = try #require(json.data(using: .utf8))
+
+        let item = try JSONDecoder().decode(AttendanceItem.self, from: data)
+
+        #expect(item.subjectName == "Laboratorio de Software")
+        #expect(item.studentName == "Mario Duarte")
+        #expect(item.timestamp >= startedAt)
+    }
+
+    @MainActor
     @Test func persistedStoreRestoresSubjectsSessionAndAttendance() async throws {
         let suiteName = "AsistQRTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
