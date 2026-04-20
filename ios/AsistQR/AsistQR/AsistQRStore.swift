@@ -1,11 +1,23 @@
 import Foundation
 import Combine
 
+enum UserRole: String, Codable {
+    case student
+    case teacher
+}
+
+struct UserSession: Codable, Equatable {
+    let name: String
+    let email: String
+    let role: UserRole
+}
+
 @MainActor
 final class AsistQRStore: ObservableObject {
     @Published private(set) var subjects: [SubjectItem]
     @Published private(set) var attendance: [AttendanceItem]
     @Published private(set) var activeSession: QRSession?
+    @Published private(set) var currentUser: UserSession?
     private let defaults: UserDefaults?
     private let storageKey: String
 
@@ -13,6 +25,7 @@ final class AsistQRStore: ObservableObject {
         subjects: [SubjectItem] = SubjectItem.seed,
         attendance: [AttendanceItem] = AttendanceItem.seed,
         activeSession: QRSession? = nil,
+        currentUser: UserSession? = nil,
         defaults: UserDefaults? = nil,
         storageKey: String = "asistqr.store.v1"
     ) {
@@ -23,15 +36,27 @@ final class AsistQRStore: ObservableObject {
             self.subjects = snapshot.subjects
             self.attendance = snapshot.attendance
             self.activeSession = snapshot.activeSession
+            self.currentUser = snapshot.currentUser
         } else {
             self.subjects = subjects
             self.attendance = attendance
             self.activeSession = activeSession
+            self.currentUser = currentUser
         }
     }
 
     static func live() -> AsistQRStore {
         AsistQRStore(defaults: .standard)
+    }
+
+    func loginUser(name: String, email: String, role: UserRole) {
+        currentUser = UserSession(name: name, email: email, role: role)
+        persist()
+    }
+
+    func logoutUser() {
+        currentUser = nil
+        persist()
     }
 
     func createSubject(name: String, group: String, room: String) -> Bool {
@@ -72,7 +97,7 @@ final class AsistQRStore: ObservableObject {
     }
 
     @discardableResult
-    func registerAttendance(sessionCode: String, studentName: String = "Mario Duarte") -> AttendanceRegistrationResult {
+    func registerAttendance(sessionCode: String, studentName: String) -> AttendanceRegistrationResult {
         let code = sessionCode.trimmed
 
         guard !code.isEmpty else {
@@ -142,7 +167,8 @@ final class AsistQRStore: ObservableObject {
         let snapshot = AsistQRSnapshot(
             subjects: subjects,
             attendance: attendance,
-            activeSession: activeSession
+            activeSession: activeSession,
+            currentUser: currentUser
         )
 
         if let data = try? JSONEncoder().encode(snapshot) {
@@ -160,6 +186,7 @@ private struct AsistQRSnapshot: Codable {
     let subjects: [SubjectItem]
     let attendance: [AttendanceItem]
     let activeSession: QRSession?
+    var currentUser: UserSession?
 }
 
 struct QRSession: Codable, Equatable {

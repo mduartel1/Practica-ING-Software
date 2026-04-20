@@ -280,7 +280,8 @@ struct QRScannerView: View {
     }
 
     private func register(code: String) {
-        scanResult = store.registerAttendance(sessionCode: code)
+        let name = store.currentUser?.name ?? "Desconocido"
+        scanResult = store.registerAttendance(sessionCode: code, studentName: name)
         showResult = true
     }
 }

@@ -111,6 +111,7 @@ struct AuthLandingView: View {
 
 struct LoginView: View {
     let role: UserRole
+    @EnvironmentObject private var store: AsistQRStore
     @State private var email = ""
     @State private var password = ""
     @State private var goHome = false
@@ -131,6 +132,9 @@ struct LoginView: View {
                 SecureField("Contrasena", text: $password)
             }
         } primaryAction: {
+            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+            let name = String(trimmedEmail.split(separator: "@").first ?? Substring(trimmedEmail))
+            store.loginUser(name: name.isEmpty ? trimmedEmail : name, email: trimmedEmail, role: role)
             goHome = true
         } secondaryActionHandler: {
             goRegister = true
@@ -146,6 +150,7 @@ struct LoginView: View {
 
 struct RegisterView: View {
     let role: UserRole
+    @EnvironmentObject private var store: AsistQRStore
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
@@ -168,6 +173,9 @@ struct RegisterView: View {
                 SecureField("Contrasena", text: $password)
             }
         } primaryAction: {
+            let trimmedName = name.trimmingCharacters(in: .whitespaces)
+            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+            store.loginUser(name: trimmedName.isEmpty ? trimmedEmail : trimmedName, email: trimmedEmail, role: role)
             goHome = true
         } secondaryActionHandler: {
             goLogin = true
@@ -285,6 +293,9 @@ struct AuthFormView<Fields: View>: View {
 }
 
 struct StudentHomeView: View {
+    @EnvironmentObject private var store: AsistQRStore
+    @State private var goLanding = false
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -299,7 +310,25 @@ struct StudentHomeView: View {
             .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 18) {
-                header(title: "Alumno", subtitle: "Panel de asistencia")
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(store.currentUser?.name ?? "Alumno")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text("Panel de asistencia")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    Button {
+                        store.logoutUser()
+                        goLanding = true
+                    } label: {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
 
                 NavigationLink {
                     QRScannerView()
@@ -319,17 +348,9 @@ struct StudentHomeView: View {
             .padding(.top, 20)
         }
         .navigationBarHidden(true)
-    }
-
-    @ViewBuilder
-    private func header(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Text(subtitle)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.7))
+        .navigationDestination(isPresented: $goLanding) {
+            AuthLandingView()
+                .navigationBarHidden(true)
         }
     }
 
@@ -373,6 +394,7 @@ struct StudentHomeView: View {
 struct ProfessorHomeView: View {
     @EnvironmentObject private var store: AsistQRStore
     @State private var showingExport = false
+    @State private var goLanding = false
 
     var body: some View {
         ZStack {
@@ -387,13 +409,24 @@ struct ProfessorHomeView: View {
             .ignoresSafeArea()
 
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Profesor")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                    Text("Gestion de asignaturas y sesiones")
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(store.currentUser?.name ?? "Profesor")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text("Gestion de asignaturas y sesiones")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    Spacer()
+                    Button {
+                        store.logoutUser()
+                        goLanding = true
+                    } label: {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
                 }
 
                 NavigationLink {
@@ -428,6 +461,10 @@ struct ProfessorHomeView: View {
         .navigationBarHidden(true)
         .sheet(isPresented: $showingExport) {
             CSVExportView(csvText: store.attendanceCSV())
+        }
+        .navigationDestination(isPresented: $goLanding) {
+            AuthLandingView()
+                .navigationBarHidden(true)
         }
     }
 
@@ -1044,11 +1081,6 @@ extension SubjectItem {
         SubjectItem(name: "Bases de Datos", detail: "Grupo B · Aula 5"),
         SubjectItem(name: "Redes II", detail: "Grupo A · Aula 1")
     ]
-}
-
-enum UserRole {
-    case student
-    case teacher
 }
 
 #Preview {
