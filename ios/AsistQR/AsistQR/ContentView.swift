@@ -8,22 +8,27 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var store = AsistQRStore()
+
     var body: some View {
         AuthLandingView()
+            .environmentObject(store)
     }
 
 }
 
 struct AttendanceListView: View {
-    private let items: [AttendanceItem] = [
-        AttendanceItem(title: "Laboratorio de Software", subtitle: "Grupo A · Aula 2", time: "08:30", status: "Presente"),
-        AttendanceItem(title: "Bases de Datos", subtitle: "Grupo B · Aula 5", time: "10:15", status: "Tarde"),
-        AttendanceItem(title: "Redes II", subtitle: "Grupo A · Aula 1", time: "12:00", status: "Presente"),
-        AttendanceItem(title: "Ingenieria de Software", subtitle: "Grupo C · Aula 4", time: "13:45", status: "Justificado")
-    ]
-    private let subjects = ["Todas", "Laboratorio de Software", "Bases de Datos", "Redes II"]
+    @EnvironmentObject private var store: AsistQRStore
     @State private var selectedSubject = "Todas"
     @State private var selectedPeriod: Period = .today
+
+    private var subjects: [String] {
+        ["Todas"] + store.subjects.map(\.name)
+    }
+
+    private var items: [AttendanceItem] {
+        store.records(subject: selectedSubject, student: "Mario Duarte")
+    }
 
     var body: some View {
         ZStack {
@@ -64,8 +69,12 @@ struct AttendanceListView: View {
 
                 ScrollView {
                     VStack(spacing: 14) {
-                        ForEach(items) { item in
-                            attendanceRow(item: item)
+                        if items.isEmpty {
+                            emptyState
+                        } else {
+                            ForEach(items) { item in
+                                attendanceRow(item: item)
+                            }
                         }
                     }
                 }
@@ -76,6 +85,23 @@ struct AttendanceListView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.7))
+            Text("Sin registros para este filtro")
+                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.white.opacity(0.08))
+        )
     }
 
     @ViewBuilder
@@ -167,11 +193,60 @@ struct AttendanceListView: View {
 }
 
 struct AttendanceItem: Identifiable {
-    let id = UUID()
+    let id: UUID
     let title: String
     let subtitle: String
     let time: String
     let status: String
+    let subjectName: String
+    let studentName: String
+    let sessionCode: String
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        subtitle: String,
+        time: String,
+        status: String,
+        subjectName: String? = nil,
+        studentName: String? = nil,
+        sessionCode: String = ""
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.time = time
+        self.status = status
+        self.subjectName = subjectName ?? title
+        self.studentName = studentName ?? subtitle
+        self.sessionCode = sessionCode
+    }
+}
+
+extension AttendanceItem {
+    nonisolated static let seed: [AttendanceItem] = [
+        AttendanceItem(
+            title: "Laboratorio de Software",
+            subtitle: "Mario Duarte",
+            time: "08:30",
+            status: "Presente",
+            sessionCode: "ASISTQR-LABORATORIO-SOFTWARE-01"
+        ),
+        AttendanceItem(
+            title: "Bases de Datos",
+            subtitle: "Ana Perez",
+            time: "10:15",
+            status: "Tarde",
+            sessionCode: "ASISTQR-BASES-DATOS-01"
+        ),
+        AttendanceItem(
+            title: "Redes II",
+            subtitle: "Jose Lopez",
+            time: "12:00",
+            status: "Presente",
+            sessionCode: "ASISTQR-REDES-II-01"
+        )
+    ]
 }
 
 enum Period {

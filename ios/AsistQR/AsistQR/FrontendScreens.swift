@@ -486,11 +486,7 @@ struct ProfessorHomeView: View {
 }
 
 struct SubjectsListView: View {
-    private let subjects = [
-        SubjectItem(name: "Laboratorio de Software", detail: "Grupo A · Aula 2"),
-        SubjectItem(name: "Bases de Datos", detail: "Grupo B · Aula 5"),
-        SubjectItem(name: "Redes II", detail: "Grupo A · Aula 1")
-    ]
+    @EnvironmentObject private var store: AsistQRStore
 
     var body: some View {
         ZStack {
@@ -528,7 +524,7 @@ struct SubjectsListView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(subjects) { subject in
+                        ForEach(store.subjects) { subject in
                             NavigationLink {
                                 SubjectDetailView(subject: subject)
                             } label: {
@@ -572,9 +568,12 @@ struct SubjectsListView: View {
 }
 
 struct CreateSubjectView: View {
+    @EnvironmentObject private var store: AsistQRStore
+    @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var group = ""
     @State private var room = ""
+    @State private var errorText: String?
 
     var body: some View {
         ZStack {
@@ -608,8 +607,18 @@ struct CreateSubjectView: View {
                 .foregroundStyle(.white)
                 .tint(Color(red: 0.90, green: 0.87, blue: 0.35))
 
+                if let errorText {
+                    Text(errorText)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(red: 0.98, green: 0.71, blue: 0.32))
+                }
+
                 Button {
-                    // UI only
+                    if store.createSubject(name: name, group: group, room: room) {
+                        dismiss()
+                    } else {
+                        errorText = "Completa nombre, grupo y aula."
+                    }
                 } label: {
                     Text("Guardar")
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
@@ -656,7 +665,7 @@ struct SubjectDetailView: View {
                     .foregroundStyle(.white.opacity(0.7))
 
                 NavigationLink {
-                    SessionControlView()
+                    SessionControlView(subject: subject)
                 } label: {
                     actionRow(title: "Habilitar QR", subtitle: "Generar QR temporal para la sesion")
                 }
@@ -701,8 +710,22 @@ struct SubjectDetailView: View {
 }
 
 struct SessionControlView: View {
-    @State private var isActive = true
+    @EnvironmentObject private var store: AsistQRStore
+    let subject: SubjectItem?
+
     @State private var expiryMinutes = 15
+
+    init(subject: SubjectItem? = nil) {
+        self.subject = subject
+    }
+
+    private var selectedSubject: SubjectItem? {
+        subject ?? store.subjects.first
+    }
+
+    private var session: QRSession? {
+        store.activeSession
+    }
 
     var body: some View {
         ZStack {
@@ -721,10 +744,14 @@ struct SessionControlView: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
+                Text(selectedSubject?.name ?? "Sin asignaturas")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.7))
+
                 HStack(spacing: 10) {
-                    Text(isActive ? "QR habilitado" : "QR deshabilitado")
+                    Text(session?.isActive == true ? "QR habilitado" : "QR deshabilitado")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(isActive ? Color(red: 0.48, green: 0.90, blue: 0.63) : .white.opacity(0.6))
+                        .foregroundStyle(session?.isActive == true ? Color(red: 0.48, green: 0.90, blue: 0.63) : .white.opacity(0.6))
                     Spacer()
                     Text("Caduca en \(expiryMinutes) min")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -735,20 +762,29 @@ struct SessionControlView: View {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .fill(.white.opacity(0.08))
                         .frame(height: 260)
-                    Image(systemName: "qrcode")
-                        .font(.system(size: 70, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                    VStack(spacing: 12) {
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 70, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.8))
+                        Text(session?.code ?? "QR no generado")
+                            .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 18)
+                    }
                 }
 
                 HStack(spacing: 12) {
                     Button {
-                        isActive = true
+                        if let selectedSubject {
+                            store.enableSession(for: selectedSubject, expiryMinutes: expiryMinutes)
+                        }
                     } label: {
                         actionButton(title: "Habilitar QR", filled: true)
                     }
 
                     Button {
-                        isActive = false
+                        store.disableSession()
                     } label: {
                         actionButton(title: "Deshabilitar QR", filled: false)
                     }
@@ -788,13 +824,22 @@ struct SessionControlView: View {
 }
 
 struct ProfessorHistoryView: View {
-    private let items: [AttendanceItem] = [
-        AttendanceItem(title: "Laboratorio de Software", subtitle: "Mario Duarte", time: "08:30", status: "Presente"),
-        AttendanceItem(title: "Bases de Datos", subtitle: "Ana Perez", time: "10:15", status: "Tarde"),
-        AttendanceItem(title: "Redes II", subtitle: "Jose Lopez", time: "12:00", status: "Presente")
-    ]
-    @State private var selectedSubject = "Laboratorio de Software"
+    @EnvironmentObject private var store: AsistQRStore
+    @State private var selectedSubject = "Todas"
     @State private var selectedStudent = "Todos"
+
+    private var subjectOptions: [String] {
+        ["Todas"] + store.subjects.map(\.name)
+    }
+
+    private var studentOptions: [String] {
+        let names = Set(store.attendance.map(\.studentName)).sorted()
+        return ["Todos"] + names
+    }
+
+    private var items: [AttendanceItem] {
+        store.records(subject: selectedSubject, student: selectedStudent)
+    }
 
     var body: some View {
         ZStack {
@@ -814,18 +859,26 @@ struct ProfessorHistoryView: View {
                     .foregroundStyle(.white)
 
                 VStack(spacing: 10) {
-                    filterMenu(title: "Asignatura", selection: $selectedSubject, options: [
-                        "Laboratorio de Software", "Bases de Datos", "Redes II"
-                    ])
-                    filterMenu(title: "Alumno", selection: $selectedStudent, options: [
-                        "Todos", "Mario Duarte", "Ana Perez", "Jose Lopez"
-                    ])
+                    filterMenu(title: "Asignatura", selection: $selectedSubject, options: subjectOptions)
+                    filterMenu(title: "Alumno", selection: $selectedStudent, options: studentOptions)
                 }
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(items) { item in
-                            attendanceRow(item: item)
+                        if items.isEmpty {
+                            Text("Sin registros para este filtro")
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 28)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .fill(.white.opacity(0.08))
+                                )
+                        } else {
+                            ForEach(items) { item in
+                                attendanceRow(item: item)
+                            }
                         }
                     }
                 }
@@ -924,10 +977,24 @@ struct ProfessorHistoryView: View {
     }
 }
 
-struct SubjectItem: Identifiable {
-    let id = UUID()
+struct SubjectItem: Identifiable, Equatable {
+    let id: UUID
     let name: String
     let detail: String
+
+    init(id: UUID = UUID(), name: String, detail: String) {
+        self.id = id
+        self.name = name
+        self.detail = detail
+    }
+}
+
+extension SubjectItem {
+    nonisolated static let seed: [SubjectItem] = [
+        SubjectItem(name: "Laboratorio de Software", detail: "Grupo A · Aula 2"),
+        SubjectItem(name: "Bases de Datos", detail: "Grupo B · Aula 5"),
+        SubjectItem(name: "Redes II", detail: "Grupo A · Aula 1")
+    ]
 }
 
 enum UserRole {
@@ -937,4 +1004,5 @@ enum UserRole {
 
 #Preview {
     AuthLandingView()
+        .environmentObject(AsistQRStore())
 }

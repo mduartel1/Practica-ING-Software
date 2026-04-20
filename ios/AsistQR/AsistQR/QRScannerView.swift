@@ -132,12 +132,14 @@ struct CameraPreview: UIViewRepresentable {
 }
 
 struct QRScannerView: View {
+    @EnvironmentObject private var store: AsistQRStore
     @StateObject private var scanner = QRScannerModel()
     @State private var isTorchOn = false
     @State private var showResult = false
     @State private var showManualEntry = false
     @State private var manualCode = ""
     @State private var isFocused = false
+    @State private var scanResult: AttendanceRegistrationResult = .failure("Sin lectura.")
 
     var body: some View {
         ZStack {
@@ -254,15 +256,15 @@ struct QRScannerView: View {
             isTorchOn = false
         }
         .onChange(of: scanner.lastCode) { _, newValue in
-            guard newValue != nil else { return }
-            showResult = true
+            guard let newValue else { return }
+            register(code: newValue)
         }
         .sheet(isPresented: $showResult, onDismiss: {
             scanner.lastCode = nil
             scanner.statusText = "Esperando lectura..."
             scanner.start()
         }) {
-            ScanResultView(code: scanner.lastCode ?? "-", scannedAt: scanner.lastScannedAt)
+            ScanResultView(code: scanner.lastCode ?? "-", scannedAt: scanner.lastScannedAt, result: scanResult)
         }
         .sheet(isPresented: $showManualEntry, onDismiss: {
             manualCode = ""
@@ -272,23 +274,29 @@ struct QRScannerView: View {
                 scanner.lastScannedAt = Date()
                 scanner.statusText = "Leido: \(submitted)"
                 showManualEntry = false
-                showResult = true
+                register(code: submitted)
             }
         }
+    }
+
+    private func register(code: String) {
+        scanResult = store.registerAttendance(sessionCode: code)
+        showResult = true
     }
 }
 
 struct ScanResultView: View {
     let code: String
     let scannedAt: Date?
+    let result: AttendanceRegistrationResult
 
     var body: some View {
         VStack(spacing: 20) {
             VStack(spacing: 8) {
-                Image(systemName: "checkmark.seal.fill")
+                Image(systemName: result.isSuccess ? "checkmark.seal.fill" : "xmark.seal.fill")
                     .font(.system(size: 36, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.48, green: 0.90, blue: 0.63))
-                Text("Asistencia registrada")
+                    .foregroundStyle(result.isSuccess ? Color(red: 0.48, green: 0.90, blue: 0.63) : Color(red: 0.95, green: 0.35, blue: 0.35))
+                Text(result.title)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                 if let scannedAt {
                     Text(scannedAt.formatted(date: .abbreviated, time: .shortened))
@@ -314,7 +322,7 @@ struct ScanResultView: View {
 
             Spacer()
 
-            Text("Confirmacion visible: asistencia registrada.")
+            Text(result.message)
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
         }
@@ -392,4 +400,5 @@ struct ManualEntryView: View {
 
 #Preview {
     QRScannerView()
+        .environmentObject(AsistQRStore())
 }
