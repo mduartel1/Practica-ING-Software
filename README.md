@@ -36,16 +36,16 @@ AsistQR permite registrar asistencia en tiempo real mediante QR por sesion, con 
 
 ## Estado actual
 
-La aplicacion iOS esta integrada en `ios/AsistQR` y contiene un MVP funcional en memoria:
+La aplicacion iOS esta integrada en `ios/AsistQR` y contiene un MVP funcional con persistencia local:
 
 - Flujo de entrada por perfil: profesor o alumno.
 - Pantallas de registro e inicio de sesion simuladas.
 - Panel de profesor con asignaturas, sesion QR activa, historico y exportacion CSV.
 - Panel de alumno con escaneo QR, entrada manual de codigo y consulta de asistencia.
-- Store en memoria para asignaturas, sesiones QR y registros de asistencia.
+- Store con persistencia local para asignaturas, sesiones QR y registros de asistencia.
 - Pruebas unitarias automatizadas para creacion de asignaturas, registro de asistencia y exportacion CSV.
 
-Nota: el almacenamiento actual es en memoria. Los datos se reinician al cerrar la app.
+Nota: la persistencia actual es local en el dispositivo/simulador. No hay sincronizacion remota ni backend.
 
 ## Ejecutar la aplicacion
 

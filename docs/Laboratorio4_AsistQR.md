@@ -23,9 +23,9 @@ Integrantes: pendiente de completar por el equipo antes de entregar la presentac
 | --- | --- | --- |
 | RF-01 Seleccion de perfil | Pantalla inicial con rol Alumno/Profesor | Implementado |
 | RF-02 Registro/Login | Formularios de registro e inicio de sesion simulados | Implementado como MVP |
-| RF-03 Gestion de asignaturas | Listado y creacion de asignaturas | Implementado en memoria |
-| RF-04 Control de sesion QR | Profesor habilita/deshabilita QR y define caducidad | Implementado en memoria |
-| RF-05 Registro de asistencia | Alumno registra asistencia desde QR o entrada manual | Implementado en memoria |
+| RF-03 Gestion de asignaturas | Listado y creacion de asignaturas | Implementado con persistencia local |
+| RF-04 Control de sesion QR | Profesor habilita/deshabilita QR y define caducidad | Implementado con persistencia local |
+| RF-05 Registro de asistencia | Alumno registra asistencia desde QR o entrada manual | Implementado con persistencia local |
 | RF-06 Historico | Profesor y alumno consultan registros filtrados | Implementado |
 | RF-07 Exportacion | Profesor exporta CSV con vista previa y comparticion | Implementado |
 | RNF-01 Pruebas automatizadas | Unit tests de store, asistencia y CSV | Implementado |
@@ -47,7 +47,7 @@ flowchart TD
 La app usa una arquitectura simple de cliente iOS:
 
 - `SwiftUI Views`: pantallas de autenticacion, profesor, alumno, escaner, historico y exportacion.
-- `AsistQRStore`: estado compartido en memoria mediante `ObservableObject`.
+- `AsistQRStore`: estado compartido con `ObservableObject` y persistencia local en `UserDefaults`.
 - `QRScannerView`: integra lectura QR con `AVFoundation` y entrada manual para demo.
 - `AsistQRTests`: pruebas unitarias sobre la logica de negocio.
 
@@ -75,6 +75,7 @@ Pruebas automatizadas incluidas:
 - Rechazar asistencia cuando la sesion esta deshabilitada.
 - Exportar CSV filtrado.
 - Escapar correctamente comas y comillas en CSV.
+- Restaurar asignaturas, sesion activa y asistencia tras reconstruir el store.
 
 Comando local:
 
@@ -110,14 +111,14 @@ Duracion objetivo: 3 a 5 minutos.
 
 ## 8. Limitaciones conocidas
 
-- La persistencia es en memoria. Al cerrar la app se reinician los datos.
+- La persistencia es local en el dispositivo/simulador. No hay sincronizacion remota.
 - Registro/login son simulados para MVP.
 - No hay backend ni base de datos remota.
 - El QR se maneja como codigo de sesion y lectura/entrada manual; la generacion visual completa de QR puede ser una mejora futura.
 
 ## 9. Mejoras futuras
 
-- Persistencia local con SwiftData o Core Data.
+- Migrar la persistencia local a SwiftData o Core Data.
 - Backend para usuarios, asignaturas y asistencia real.
 - Autenticacion institucional.
 - QR visual generado desde payload firmado.

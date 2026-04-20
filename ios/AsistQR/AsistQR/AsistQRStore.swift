@@ -6,15 +6,32 @@ final class AsistQRStore: ObservableObject {
     @Published private(set) var subjects: [SubjectItem]
     @Published private(set) var attendance: [AttendanceItem]
     @Published private(set) var activeSession: QRSession?
+    private let defaults: UserDefaults?
+    private let storageKey: String
 
     init(
         subjects: [SubjectItem] = SubjectItem.seed,
         attendance: [AttendanceItem] = AttendanceItem.seed,
-        activeSession: QRSession? = nil
+        activeSession: QRSession? = nil,
+        defaults: UserDefaults? = nil,
+        storageKey: String = "asistqr.store.v1"
     ) {
-        self.subjects = subjects
-        self.attendance = attendance
-        self.activeSession = activeSession
+        self.defaults = defaults
+        self.storageKey = storageKey
+
+        if let snapshot = Self.loadSnapshot(defaults: defaults, storageKey: storageKey) {
+            self.subjects = snapshot.subjects
+            self.attendance = snapshot.attendance
+            self.activeSession = snapshot.activeSession
+        } else {
+            self.subjects = subjects
+            self.attendance = attendance
+            self.activeSession = activeSession
+        }
+    }
+
+    static func live() -> AsistQRStore {
+        AsistQRStore(defaults: .standard)
     }
 
     func createSubject(name: String, group: String, room: String) -> Bool {
@@ -32,6 +49,7 @@ final class AsistQRStore: ObservableObject {
                 detail: "\(trimmedGroup) · \(trimmedRoom)"
             )
         )
+        persist()
         return true
     }
 
@@ -43,12 +61,14 @@ final class AsistQRStore: ObservableObject {
             expiresAt: Date().addingTimeInterval(TimeInterval(expiryMinutes * 60)),
             isActive: true
         )
+        persist()
     }
 
     func disableSession() {
         guard var session = activeSession else { return }
         session.isActive = false
         activeSession = session
+        persist()
     }
 
     @discardableResult
@@ -85,6 +105,7 @@ final class AsistQRStore: ObservableObject {
             sessionCode: code
         )
         attendance.insert(record, at: 0)
+        persist()
         return .success("Asistencia registrada correctamente.")
     }
 
@@ -114,9 +135,33 @@ final class AsistQRStore: ObservableObject {
         }
         return escaped
     }
+
+    private func persist() {
+        guard let defaults else { return }
+        let snapshot = AsistQRSnapshot(
+            subjects: subjects,
+            attendance: attendance,
+            activeSession: activeSession
+        )
+
+        if let data = try? JSONEncoder().encode(snapshot) {
+            defaults.set(data, forKey: storageKey)
+        }
+    }
+
+    private static func loadSnapshot(defaults: UserDefaults?, storageKey: String) -> AsistQRSnapshot? {
+        guard let data = defaults?.data(forKey: storageKey) else { return nil }
+        return try? JSONDecoder().decode(AsistQRSnapshot.self, from: data)
+    }
 }
 
-struct QRSession: Equatable {
+private struct AsistQRSnapshot: Codable {
+    let subjects: [SubjectItem]
+    let attendance: [AttendanceItem]
+    let activeSession: QRSession?
+}
+
+struct QRSession: Codable, Equatable {
     let subjectName: String
     let subjectDetail: String
     let code: String
