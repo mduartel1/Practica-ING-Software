@@ -903,7 +903,7 @@ struct SessionControlView: View {
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.7))
                     Spacer()
-                    Stepper("", value: $expiryMinutes, in: 5...45, step: 5)
+                    Stepper("", value: $expiryMinutes, in: 1...120, step: 1)
                         .labelsHidden()
                 }
                 .padding(.top, 6)
@@ -943,7 +943,12 @@ struct SessionControlView: View {
             return
         }
         timeRemaining = max(0, expiresAt.timeIntervalSinceNow)
-        if timeRemaining == 0 { stopCountdown() }
+        if timeRemaining == 0 {
+            stopCountdown()
+            if store.activeSession?.isActive == true {
+                store.disableSession()
+            }
+        }
     }
 
     private func restoreCountdownIfNeeded() {
