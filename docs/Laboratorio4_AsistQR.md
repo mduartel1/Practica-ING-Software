@@ -6,7 +6,7 @@ Proyecto: AsistQR.
 
 AsistQR es una aplicacion iOS para registrar asistencia academica mediante codigos QR por sesion.
 
-Integrantes: pendiente de completar por el equipo antes de entregar la presentacion.
+Integrantes: Geronimo Gonzalez Ferrer, Mario Duarte Lanseros, Jose Andreu Latras y Carlos Garcia-Gil
 
 ## 2. Funcionalidad planificada inicialmente
 
