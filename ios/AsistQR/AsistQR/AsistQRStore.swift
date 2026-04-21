@@ -87,6 +87,21 @@ final class AsistQRStore: ObservableObject {
         return true
     }
 
+    func addStudent(_ name: String, to subjectId: UUID) {
+        let trimmed = name.trimmed
+        guard !trimmed.isEmpty,
+              let idx = subjects.firstIndex(where: { $0.id == subjectId }),
+              !subjects[idx].students.contains(trimmed) else { return }
+        subjects[idx].students.append(trimmed)
+        persist()
+    }
+
+    func removeStudent(_ name: String, from subjectId: UUID) {
+        guard let idx = subjects.firstIndex(where: { $0.id == subjectId }) else { return }
+        subjects[idx].students.removeAll { $0 == name }
+        persist()
+    }
+
     func enableSession(for subject: SubjectItem, expiryMinutes: Int) {
         activeSession = QRSession(
             subjectName: subject.name,
