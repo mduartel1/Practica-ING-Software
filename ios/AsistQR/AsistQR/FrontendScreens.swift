@@ -808,6 +808,13 @@ struct CreateSubjectView: View {
 
 struct SubjectDetailView: View {
     let subject: SubjectItem
+    @EnvironmentObject private var store: AsistQRStore
+    @State private var showAddStudent = false
+    @State private var newStudentName = ""
+
+    private var liveSubject: SubjectItem {
+        store.subjects.first(where: { $0.id == subject.id }) ?? subject
+    }
 
     var body: some View {
         ZStack {
@@ -821,33 +828,170 @@ struct SubjectDetailView: View {
             )
             .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 16) {
-                Text(subject.name)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                Text(subject.detail)
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.7))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(liveSubject.name)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Text(liveSubject.detail)
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
 
-                NavigationLink {
-                    SessionControlView(subject: subject)
-                } label: {
-                    actionRow(title: "Habilitar QR", subtitle: "Generar QR temporal para la sesion")
+                    NavigationLink {
+                        SessionControlView(subject: liveSubject)
+                    } label: {
+                        actionRow(title: "Habilitar QR", subtitle: "Generar QR temporal para la sesion")
+                    }
+
+                    NavigationLink {
+                        ProfessorHistoryView()
+                    } label: {
+                        actionRow(title: "Ver historico", subtitle: "Por asignatura y alumno")
+                    }
+
+                    studentsSection
                 }
-
-                NavigationLink {
-                    ProfessorHistoryView()
-                } label: {
-                    actionRow(title: "Ver historico", subtitle: "Por asignatura y alumno")
-                }
-
-                Spacer()
+                .padding(.horizontal, 22)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 22)
-            .padding(.top, 16)
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAddStudent) {
+            addStudentSheet
+        }
+    }
+
+    private var studentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Alumnos matriculados")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("\(liveSubject.students.count)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.8))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color(red: 0.90, green: 0.87, blue: 0.35)))
+                Button {
+                    showAddStudent = true
+                } label: {
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.90, green: 0.87, blue: 0.35))
+                }
+            }
+
+            if liveSubject.students.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.slash")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.4))
+                    Text("Aun no hay alumnos. Pulsa + para anadir.")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.white.opacity(0.06))
+                )
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(liveSubject.students.enumerated()), id: \.offset) { idx, student in
+                        HStack {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white.opacity(0.5))
+                            Text(student)
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white)
+                            Spacer()
+                            Button {
+                                store.removeStudent(student, from: liveSubject.id)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color(red: 0.95, green: 0.35, blue: 0.35).opacity(0.8))
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 14)
+                        if idx < liveSubject.students.count - 1 {
+                            Divider().overlay(Color.white.opacity(0.08))
+                                .padding(.horizontal, 14)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.white.opacity(0.09))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(.white.opacity(0.10), lineWidth: 1)
+                        )
+                )
+            }
+        }
+    }
+
+    private var addStudentSheet: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 6) {
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(Color(red: 0.90, green: 0.87, blue: 0.35))
+                Text("Anadir alumno")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text("Introduce el nombre del alumno")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+
+            TextField("Nombre completo", text: $newStudentName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.black.opacity(0.05))
+                )
+
+            Button {
+                let trimmed = newStudentName.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                store.addStudent(trimmed, to: liveSubject.id)
+                newStudentName = ""
+                showAddStudent = false
+            } label: {
+                Text("Anadir")
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(red: 0.90, green: 0.87, blue: 0.35))
+                    )
+                    .foregroundStyle(Color.black.opacity(0.9))
+            }
+
+            Button { showAddStudent = false } label: {
+                Text("Cancelar")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 24)
+        .padding(.bottom, 20)
+        .onDisappear { newStudentName = "" }
     }
 
     @ViewBuilder
@@ -1291,15 +1435,25 @@ struct QRCodeImageView: View {
     }
 }
 
-struct SubjectItem: Codable, Identifiable, Equatable {
+struct SubjectItem: Identifiable, Equatable, Codable {
     let id: UUID
     let name: String
     let detail: String
+    var students: [String]
 
-    init(id: UUID = UUID(), name: String, detail: String) {
+    init(id: UUID = UUID(), name: String, detail: String, students: [String] = []) {
         self.id = id
         self.name = name
         self.detail = detail
+        self.students = students
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        detail = try c.decode(String.self, forKey: .detail)
+        students = (try? c.decodeIfPresent([String].self, forKey: .students)) ?? []
     }
 }
 
