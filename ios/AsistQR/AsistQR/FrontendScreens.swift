@@ -722,30 +722,36 @@ struct CreateSubjectView: View {
             )
             .ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Crear asignatura")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-
-                VStack(spacing: 12) {
-                    TextField("Nombre", text: $name)
-                    TextField("Grupo", text: $group)
-                    TextField("Aula", text: $room)
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Crear asignatura")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Rellena los datos de la nueva asignatura")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
                 }
-                .textFieldStyle(.plain)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.white.opacity(0.12))
-                )
-                .foregroundStyle(.white)
-                .tint(Color(red: 0.90, green: 0.87, blue: 0.35))
+
+                VStack(spacing: 14) {
+                    labeledField(label: "Nombre", placeholder: "Ej. Laboratorio de Software", text: $name)
+                    labeledField(label: "Grupo", placeholder: "Ej. Grupo A", text: $group)
+                    labeledField(label: "Aula", placeholder: "Ej. Aula 204", text: $room)
+                }
 
                 if let errorText {
-                    Text(errorText)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color(red: 0.98, green: 0.71, blue: 0.32))
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13))
+                        Text(errorText)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(Color(red: 0.98, green: 0.71, blue: 0.32))
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color(red: 0.98, green: 0.71, blue: 0.32).opacity(0.12))
+                    )
                 }
 
                 Button {
@@ -755,10 +761,10 @@ struct CreateSubjectView: View {
                         errorText = "Completa nombre, grupo y aula."
                     }
                 } label: {
-                    Text("Guardar")
+                    Text("Guardar asignatura")
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 15)
                         .background(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .fill(Color(red: 0.90, green: 0.87, blue: 0.35))
@@ -773,6 +779,30 @@ struct CreateSubjectView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder
+    private func labeledField(label: String, placeholder: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.75))
+            TextField(placeholder, text: text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(.white)
+                .tint(Color(red: 0.90, green: 0.87, blue: 0.35))
+                .padding(.vertical, 13)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.white.opacity(0.10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(.white.opacity(0.20), lineWidth: 1)
+                        )
+                )
+        }
     }
 }
 
