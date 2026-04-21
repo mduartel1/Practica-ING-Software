@@ -569,6 +569,7 @@ struct ProfessorHomeView: View {
 
 struct SubjectsListView: View {
     @EnvironmentObject private var store: AsistQRStore
+    @State private var subjectToDelete: SubjectItem?
 
     var body: some View {
         ZStack {
@@ -588,7 +589,7 @@ struct SubjectsListView: View {
                         Text("Asignaturas")
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("Gestion y creacion")
+                        Text("\(store.subjects.count) asignaturas")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.7))
                     }
@@ -604,13 +605,40 @@ struct SubjectsListView: View {
                     }
                 }
 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(store.subjects) { subject in
-                            NavigationLink {
-                                SubjectDetailView(subject: subject)
-                            } label: {
-                                subjectRow(subject: subject)
+                if store.subjects.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.5))
+                        Text("Aun no hay asignaturas")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                        Text("Pulsa + para crear una")
+                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(.white.opacity(0.06))
+                    )
+                } else {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(store.subjects) { subject in
+                                NavigationLink {
+                                    SubjectDetailView(subject: subject)
+                                } label: {
+                                    subjectRow(subject: subject)
+                                }
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        subjectToDelete = subject
+                                    } label: {
+                                        Label("Eliminar asignatura", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     }
@@ -622,10 +650,25 @@ struct SubjectsListView: View {
         }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Eliminar asignatura", isPresented: Binding(
+            get: { subjectToDelete != nil },
+            set: { if !$0 { subjectToDelete = nil } }
+        )) {
+            Button("Eliminar", role: .destructive) {
+                if let s = subjectToDelete {
+                    store.deleteSubject(id: s.id)
+                }
+                subjectToDelete = nil
+            }
+            Button("Cancelar", role: .cancel) { subjectToDelete = nil }
+        } message: {
+            Text("Se eliminara \"\(subjectToDelete?.name ?? "")\" y no se podra recuperar.")
+        }
     }
 
     @ViewBuilder
     private func subjectRow(subject: SubjectItem) -> some View {
+        let count = store.attendanceCount(for: subject.name)
         HStack {
             VStack(alignment: .leading, spacing: 6) {
                 Text(subject.name)
@@ -636,6 +679,16 @@ struct SubjectsListView: View {
                     .foregroundStyle(.white.opacity(0.65))
             }
             Spacer()
+            if count > 0 {
+                Text("\(count)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.8))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color(red: 0.90, green: 0.87, blue: 0.35))
+                    )
+            }
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.white.opacity(0.6))
