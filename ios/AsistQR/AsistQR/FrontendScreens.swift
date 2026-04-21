@@ -113,10 +113,8 @@ struct AuthLandingView: View {
 struct LoginView: View {
     let role: UserRole
     @EnvironmentObject private var store: AsistQRStore
-    @State private var email = ""
-    @State private var password = ""
+    @State private var name = ""
     @State private var goHome = false
-    @State private var goRegister = false
     @State private var errorText: String?
 
     var body: some View {
@@ -124,42 +122,25 @@ struct LoginView: View {
             title: "Iniciar sesion",
             subtitle: role == .teacher ? "Acceso para profesores" : "Acceso para alumnos",
             primaryLabel: "Entrar",
-            secondaryText: "No tienes cuenta?",
-            secondaryAction: "Registrarse",
+            secondaryText: nil,
+            secondaryAction: nil,
             errorMessage: errorText
         ) {
-            Group {
-                TextField("Correo institucional", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                SecureField("Contrasena", text: $password)
-            }
+            TextField("Tu nombre", text: $name)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
         } primaryAction: {
             errorText = nil
-            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-            guard !trimmedEmail.isEmpty else {
-                errorText = "Introduce tu correo institucional."
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else {
+                errorText = "Introduce tu nombre."
                 return
             }
-            guard trimmedEmail.contains("@") else {
-                errorText = "El correo no tiene un formato valido."
-                return
-            }
-            guard !password.isEmpty else {
-                errorText = "Introduce tu contrasena."
-                return
-            }
-            let name = String(trimmedEmail.split(separator: "@").first ?? Substring(trimmedEmail))
-            store.loginUser(name: name.isEmpty ? trimmedEmail : name, email: trimmedEmail, role: role)
+            store.loginUser(name: trimmed, email: "\(trimmed.lowercased().replacingOccurrences(of: " ", with: "."))@asistqr.demo", role: role)
             goHome = true
-        } secondaryActionHandler: {
-            goRegister = true
-        }
+        } secondaryActionHandler: {}
         .navigationDestination(isPresented: $goHome) {
             role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
-        }
-        .navigationDestination(isPresented: $goRegister) {
-            RegisterView(role: role)
         }
     }
 }
@@ -168,10 +149,7 @@ struct RegisterView: View {
     let role: UserRole
     @EnvironmentObject private var store: AsistQRStore
     @State private var name = ""
-    @State private var email = ""
-    @State private var password = ""
     @State private var goHome = false
-    @State private var goLogin = false
     @State private var errorText: String?
 
     var body: some View {
@@ -179,43 +157,25 @@ struct RegisterView: View {
             title: "Registrarse",
             subtitle: role == .teacher ? "Registro de profesor" : "Registro de alumno",
             primaryLabel: "Registrar",
-            secondaryText: "Ya tienes cuenta?",
-            secondaryAction: "Iniciar sesion",
+            secondaryText: nil,
+            secondaryAction: nil,
             errorMessage: errorText
         ) {
-            Group {
-                TextField("Nombre completo", text: $name)
-                TextField("Correo institucional", text: $email)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                SecureField("Contrasena", text: $password)
-            }
+            TextField("Tu nombre completo", text: $name)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
         } primaryAction: {
             errorText = nil
-            let trimmedName = name.trimmingCharacters(in: .whitespaces)
-            let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-            guard !trimmedName.isEmpty else {
-                errorText = "Introduce tu nombre completo."
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else {
+                errorText = "Introduce tu nombre."
                 return
             }
-            guard !trimmedEmail.isEmpty, trimmedEmail.contains("@") else {
-                errorText = "Introduce un correo institucional valido."
-                return
-            }
-            guard password.count >= 6 else {
-                errorText = "La contrasena debe tener al menos 6 caracteres."
-                return
-            }
-            store.loginUser(name: trimmedName, email: trimmedEmail, role: role)
+            store.loginUser(name: trimmed, email: "\(trimmed.lowercased().replacingOccurrences(of: " ", with: "."))@asistqr.demo", role: role)
             goHome = true
-        } secondaryActionHandler: {
-            goLogin = true
-        }
+        } secondaryActionHandler: {}
         .navigationDestination(isPresented: $goHome) {
             role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
-        }
-        .navigationDestination(isPresented: $goLogin) {
-            LoginView(role: role)
         }
     }
 }
@@ -224,8 +184,8 @@ struct AuthFormView<Fields: View>: View {
     let title: String
     let subtitle: String
     let primaryLabel: String
-    let secondaryText: String
-    let secondaryAction: String
+    let secondaryText: String?
+    let secondaryAction: String?
     let fields: Fields
     let primaryAction: () -> Void
     let secondaryActionHandler: () -> Void
@@ -235,8 +195,8 @@ struct AuthFormView<Fields: View>: View {
         title: String,
         subtitle: String,
         primaryLabel: String,
-        secondaryText: String,
-        secondaryAction: String,
+        secondaryText: String?,
+        secondaryAction: String?,
         errorMessage: String? = nil,
         @ViewBuilder fields: () -> Fields,
         primaryAction: @escaping () -> Void,
@@ -273,7 +233,7 @@ struct AuthFormView<Fields: View>: View {
                     Text(subtitle)
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.7))
-                    Text("Introduce los datos requeridos")
+                    Text("Introduce tu nombre para continuar")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.55))
                 }
@@ -322,16 +282,18 @@ struct AuthFormView<Fields: View>: View {
                         .foregroundStyle(Color.black.opacity(0.9))
                 }
 
-                HStack(spacing: 6) {
-                    Text(secondaryText)
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.7))
-                    Button {
-                        secondaryActionHandler()
-                    } label: {
-                        Text(secondaryAction)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color(red: 0.90, green: 0.87, blue: 0.35))
+                if let secondaryText, let secondaryAction {
+                    HStack(spacing: 6) {
+                        Text(secondaryText)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.7))
+                        Button {
+                            secondaryActionHandler()
+                        } label: {
+                            Text(secondaryAction)
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color(red: 0.90, green: 0.87, blue: 0.35))
+                        }
                     }
                 }
 
