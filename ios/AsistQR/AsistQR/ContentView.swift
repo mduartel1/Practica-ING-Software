@@ -20,7 +20,7 @@ struct ContentView: View {
 struct AttendanceListView: View {
     @EnvironmentObject private var store: AsistQRStore
     @State private var selectedSubject = "Todas"
-    @State private var selectedPeriod: Period = .today
+    @State private var selectedPeriod: Period = .month
 
     private var subjects: [String] {
         ["Todas"] + store.subjects.map(\.name)
@@ -135,7 +135,10 @@ struct AttendanceListView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 6) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(item.timestamp.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.55))
                 Text(item.time)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
