@@ -2,7 +2,13 @@ import SwiftUI
 import CoreImage.CIFilterBuiltins
 
 struct AuthLandingView: View {
+    @EnvironmentObject private var store: AsistQRStore
     @State private var role: UserRole = .student
+    @State private var goHome = false
+
+    private var demoName: String {
+        role == .teacher ? "Profesor Demo" : "Alumno Demo"
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,18 +36,15 @@ struct AuthLandingView: View {
 
                     rolePicker
 
-                    VStack(spacing: 14) {
-                        NavigationLink {
-                            LoginView(role: role)
-                        } label: {
-                            actionButton(title: "Iniciar sesion", filled: true)
-                        }
-
-                        NavigationLink {
-                            RegisterView(role: role)
-                        } label: {
-                            actionButton(title: "Registrarse", filled: false)
-                        }
+                    Button {
+                        store.loginUser(
+                            name: demoName,
+                            email: "\(demoName.lowercased().replacingOccurrences(of: " ", with: "."))@asistqr.demo",
+                            role: role
+                        )
+                        goHome = true
+                    } label: {
+                        actionButton(title: "Iniciar sesion", filled: true)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -56,6 +59,9 @@ struct AuthLandingView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 28)
                 .padding(.bottom, 20)
+            }
+            .navigationDestination(isPresented: $goHome) {
+                role == .teacher ? AnyView(ProfessorHomeView()) : AnyView(StudentHomeView())
             }
         }
     }
