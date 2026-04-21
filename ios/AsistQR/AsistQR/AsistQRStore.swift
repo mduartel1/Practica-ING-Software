@@ -59,6 +59,15 @@ final class AsistQRStore: ObservableObject {
         persist()
     }
 
+    func deleteSubject(id: UUID) {
+        subjects.removeAll { $0.id == id }
+        persist()
+    }
+
+    func attendanceCount(for subjectName: String) -> Int {
+        attendance.filter { $0.subjectName == subjectName }.count
+    }
+
     func createSubject(name: String, group: String, room: String) -> Bool {
         let trimmedName = name.trimmed
         let trimmedGroup = group.trimmed
