@@ -178,6 +178,10 @@ final class AsistQRStore: ObservableObject {
             .joined(separator: "\n")
     }
 
+    func records(forSessionCode code: String) -> [AttendanceItem] {
+        attendance.filter { $0.sessionCode == code }
+    }
+
     private nonisolated static func csvField(_ value: String) -> String {
         let escaped = value.replacingOccurrences(of: "\"", with: "\"\"")
         if escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n") {
