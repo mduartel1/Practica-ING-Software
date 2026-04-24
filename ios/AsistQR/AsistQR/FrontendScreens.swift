@@ -1012,6 +1012,11 @@ struct SessionControlView: View {
         return Color(red: 0.95, green: 0.35, blue: 0.35)
     }
 
+    private var sessionAttendance: [AttendanceItem] {
+        guard let code = session?.code else { return [] }
+        return store.records(forSessionCode: code)
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -1102,6 +1107,70 @@ struct SessionControlView: View {
                         .labelsHidden()
                 }
                 .padding(.top, 6)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Asistencia en directo")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Text("\(sessionAttendance.count)")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.black.opacity(0.85))
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(
+                                Capsule()
+                                    .fill(Color(red: 0.90, green: 0.87, blue: 0.35))
+                            )
+                    }
+
+                    if sessionAttendance.isEmpty {
+                        Text("Todavia no hay alumnos registrados en esta sesion.")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.65))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 18)
+                            .padding(.horizontal, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(.white.opacity(0.08))
+                            )
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 10) {
+                                ForEach(sessionAttendance) { item in
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.studentName)
+                                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(.white)
+                                            Text(item.subjectName)
+                                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                                .foregroundStyle(.white.opacity(0.6))
+                                        }
+                                        Spacer()
+                                        VStack(alignment: .trailing, spacing: 4) {
+                                            Text(item.time)
+                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(.white)
+                                            Text(item.status)
+                                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                                .foregroundStyle(Color(red: 0.48, green: 0.90, blue: 0.63))
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 14)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .fill(.white.opacity(0.10))
+                                    )
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 220)
+                    }
+                }
 
                 Spacer()
             }

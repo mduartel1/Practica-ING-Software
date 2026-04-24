@@ -94,6 +94,33 @@ struct AsistQRTests {
     }
 
     @MainActor
+    @Test func recordsForSessionCodeOnlyIncludeMatchingAttendance() async throws {
+        let records = [
+            AttendanceItem(
+                title: "Laboratorio de Software",
+                subtitle: "Mario Duarte",
+                time: "08:30",
+                status: "Presente",
+                sessionCode: "ASISTQR-LAB-01"
+            ),
+            AttendanceItem(
+                title: "Bases de Datos",
+                subtitle: "Ana Perez",
+                time: "10:15",
+                status: "Presente",
+                sessionCode: "ASISTQR-BD-01"
+            )
+        ]
+        let store = AsistQRStore(subjects: [], attendance: records)
+
+        let sessionRecords = store.records(forSessionCode: "ASISTQR-LAB-01")
+
+        #expect(sessionRecords.count == 1)
+        #expect(sessionRecords.first?.studentName == "Mario Duarte")
+        #expect(sessionRecords.first?.sessionCode == "ASISTQR-LAB-01")
+    }
+
+    @MainActor
     @Test func attendanceCSVEscapesCommaAndQuoteFields() async throws {
         let records = [
             AttendanceItem(
